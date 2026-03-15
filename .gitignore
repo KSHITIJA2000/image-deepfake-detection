@@ -1,0 +1,26 @@
+# Virtual Environment
+venv/
+.env/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Datasets
+dataset/
+dataset(1500)/
+data/
+
+# Model files
+*.pth
+*.pt
+*.h5
+models/
+
+# OS files
+Thumbs.db
+.DS_Store
