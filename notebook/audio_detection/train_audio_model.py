@@ -1,17 +1,18 @@
-import argparse
 import os
+import sys
+import argparse
 from typing import Tuple
 
 import torch
 from torch import nn, optim
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader
 
-try:
-    from .dataset_loader import AudioDeepfakeDataset, collate_skip_corrupted
-    from .model import AudioDeepfakeCNNLSTM
-except ImportError:
-    from dataset_loader import AudioDeepfakeDataset, collate_skip_corrupted
-    from model import AudioDeepfakeCNNLSTM
+# Add project root to sys.path
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+sys.path.insert(0, PROJECT_ROOT)
+
+from app.modules.audio.dataset_loader import AudioDeepfakeDataset, collate_skip_corrupted
+from app.modules.audio.model import AudioDeepfakeCNNLSTM
 
 
 def run_epoch(
@@ -44,7 +45,6 @@ def run_epoch(
 
             if is_train:
                 loss.backward()
-                # Gradient clipping — prevents exploding gradients with 2-layer LSTM
                 torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=5.0)
                 optimizer.step()
 
@@ -56,101 +56,75 @@ def run_epoch(
     if total_samples == 0:
         return 0.0, 0.0
 
-    return total_loss / total_samples, total_correct / total_samples
+    avg_loss = total_loss / total_samples
+    accuracy = total_correct / total_samples
+    return avg_loss, accuracy
 
 
-def main() -> None:
+def main():
     parser = argparse.ArgumentParser(description="Train audio deepfake detection model.")
-    parser.add_argument("--data_dir",    type=str,   default="data/audio/train")
-    parser.add_argument("--save_path",   type=str,   default="saved_models/audio_model.pth")
-    parser.add_argument("--batch_size",  type=int,   default=32)
-    parser.add_argument("--epochs",      type=int,   default=30)
-    parser.add_argument("--lr",          type=float, default=1e-4)
-    parser.add_argument("--val_split",   type=float, default=0.2)
-    parser.add_argument("--num_workers", type=int,   default=0)
-    parser.add_argument("--patience",    type=int,   default=5,
-                        help="Early stopping patience (epochs without improvement)")
+    parser.add_argument("--train_dir", type=str, default=os.path.join(PROJECT_ROOT, "data", "audio", "train"))
+    parser.add_argument("--val_dir", type=str,   default=os.path.join(PROJECT_ROOT, "data", "audio", "val"))
+    parser.add_argument("--save_path", type=str, default=os.path.join(PROJECT_ROOT, "models", "audio_model", "audio_model.pth"))
+    parser.add_argument("--batch_size", type=int, default=32)
+    parser.add_argument("--epochs", type=int, default=30)
+    parser.add_argument("--lr", type=float, default=1e-4)
+    parser.add_argument("--num_workers", type=int, default=0)
+    parser.add_argument("--patience", type=int, default=5)
     args = parser.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
-    # Training dataset uses augmentation; val dataset does not.
-    full_dataset = AudioDeepfakeDataset(root_dir=args.data_dir, augment=False)
+    # Check datasets
+    for dir_path, name in [(args.train_dir, "Train"), (args.val_dir, "Validation")]:
+        print(f"\n{name} directory: {dir_path}")
+        if not os.path.isdir(dir_path):
+            raise RuntimeError(f"{name} directory does not exist!")
+        for class_name in ["real", "fake"]:
+            class_dir = os.path.join(dir_path, class_name)
+            if not os.path.isdir(class_dir):
+                raise RuntimeError(f"Class folder {class_dir} does not exist!")
+            files = [f for f in os.listdir(class_dir) if f.lower().endswith((".wav", ".mp3"))]
+            print(f"  {class_name}: {len(files)} audio files found")
+            if len(files) == 0:
+                raise RuntimeError(f"No audio files found in {class_dir}")
 
-    val_size   = int(len(full_dataset) * args.val_split)
-    train_size = len(full_dataset) - val_size
-    train_subset, val_subset = random_split(
-        full_dataset,
-        [train_size, val_size],
-        generator=torch.Generator().manual_seed(42),  # reproducible split
-    )
-
-    # Wrap train subset in an augmenting dataset view
-    # by enabling augment flag directly on the underlying dataset for train indices.
-    # Simpler approach: create two separate dataset instances.
-    train_dataset = AudioDeepfakeDataset(root_dir=args.data_dir, augment=True)
-    val_dataset   = AudioDeepfakeDataset(root_dir=args.data_dir, augment=False)
-
-    # Use same seed so train/val split is identical between both dataset instances.
-    generator = torch.Generator().manual_seed(42)
-    train_dataset, _ = random_split(train_dataset, [train_size, val_size], generator=generator)
-    generator = torch.Generator().manual_seed(42)
-    _, val_dataset   = random_split(val_dataset,   [train_size, val_size], generator=generator)
+    # Datasets and DataLoaders
+    train_dataset = AudioDeepfakeDataset(root_dir=args.train_dir, augment=True)
+    val_dataset   = AudioDeepfakeDataset(root_dir=args.val_dir, augment=False)
 
     pin_memory = device.type == "cuda"
-    train_loader = DataLoader(
-        train_dataset,
-        batch_size=args.batch_size,
-        shuffle=True,
-        num_workers=args.num_workers,
-        pin_memory=pin_memory,
-        collate_fn=collate_skip_corrupted,
-    )
-    val_loader = DataLoader(
-        val_dataset,
-        batch_size=args.batch_size,
-        shuffle=False,
-        num_workers=args.num_workers,
-        pin_memory=pin_memory,
-        collate_fn=collate_skip_corrupted,
-    )
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,
+                              num_workers=args.num_workers, pin_memory=pin_memory,
+                              collate_fn=collate_skip_corrupted)
+    val_loader   = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False,
+                              num_workers=args.num_workers, pin_memory=pin_memory,
+                              collate_fn=collate_skip_corrupted)
 
-    model     = AudioDeepfakeCNNLSTM().to(device)
+    # Model, loss, optimizer
+    model = AudioDeepfakeCNNLSTM().to(device)
     criterion = nn.CrossEntropyLoss()
-
-    # weight_decay adds L2 regularization — reduces overfitting
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-4)
-
-    # Reduce LR when val accuracy plateaus
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode="max", factor=0.5, patience=3
-    )
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="max", factor=0.5, patience=3)
 
     os.makedirs(os.path.dirname(args.save_path), exist_ok=True)
 
-    best_val_acc     = 0.0
+    best_val_acc = 0.0
     epochs_no_improve = 0
 
+    # Training loop
     for epoch in range(args.epochs):
-        train_loss, train_acc = run_epoch(
-            model=model, loader=train_loader,
-            criterion=criterion, device=device, optimizer=optimizer,
-        )
-        val_loss, val_acc = run_epoch(
-            model=model, loader=val_loader,
-            criterion=criterion, device=device, optimizer=None,
-        )
+        train_loss, train_acc = run_epoch(model, train_loader, criterion, device, optimizer)
+        val_loss, val_acc = run_epoch(model, val_loader, criterion, device, optimizer=None)
 
-        current_lr = optimizer.param_groups[0]["lr"]
         print(
-            f"Epoch [{epoch + 1:02d}/{args.epochs}] "
+            f"\nEpoch [{epoch+1}/{args.epochs}] "
             f"Train Loss: {train_loss:.4f} | Train Acc: {train_acc:.4f} | "
-            f"Val Loss: {val_loss:.4f} | Val Acc: {val_acc:.4f} | "
-            f"LR: {current_lr:.2e}"
+            f"Val Loss: {val_loss:.4f} | Val Acc: {val_acc:.4f}"
         )
 
-        # Step scheduler based on val accuracy
+        # Scheduler step based on val accuracy
         scheduler.step(val_acc)
 
         # Save best model + early stopping
@@ -163,7 +137,7 @@ def main() -> None:
             epochs_no_improve += 1
             print(f"  >> No improvement ({epochs_no_improve}/{args.patience})")
             if epochs_no_improve >= args.patience:
-                print(f"Early stopping triggered at epoch {epoch + 1}.")
+                print(f"Early stopping triggered at epoch {epoch+1}")
                 break
 
     print(f"\nTraining complete. Best validation accuracy: {best_val_acc:.4f}")

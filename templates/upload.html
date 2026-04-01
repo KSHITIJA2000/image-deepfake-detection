@@ -1,274 +1,312 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Detectify.ai - Hybrid Deepfake Detection</title>
-  <meta name="description" content="Detectify.ai provides AI-powered deepfake detection using Swin Transformer and EfficientNetV2-S.">
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeepGuardX | Forensic Media Authentication</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
 
-  <style>
-    /* Global Styles */
-    body {
-      font-family: 'Space Grotesk', sans-serif;
-      margin: 0;
-      padding: 0;
-      background-color: #0f172a;
-      color: #fff;
-    }
-    a { text-decoration: none; color: inherit; }
+    <style>
+        :root {
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --brand: #0f172a;
+            --accent: #2563eb;
+            --border: #e2e8f0;
+            --text-main: #1e293b;
+            --text-dim: #64748b;
+            --success: #10b981;
+            --danger: #ef4444;
+        }
 
-    .container { max-width: 1200px; margin: auto; padding: 40px 20px; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
-    h1, h2, h3 { margin: 0 0 20px 0; }
-    p { color: #94a3b8; line-height: 1.6; }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            line-height: 1.6;
+        }
 
-    /* Navbar */
-    nav.navbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 15px 40px;
-      background-color: #1e293b;
-    }
-    .navbar .logo { font-weight: 700; font-size: 24px; color: #3b82f6; }
-    .nav-links { display: flex; gap: 20px; }
-    .nav-links a { color: #94a3b8; font-weight: 500; transition: 0.3s; }
-    .nav-links a:hover { color: #3b82f6; }
+        /* --- NAVIGATION --- */
+        nav {
+            background: var(--card);
+            padding: 1.25rem 10%;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
 
-    /* Hero Section */
-    .hero {
-      text-align: center;
-      padding: 80px 20px;
-      background: linear-gradient(90deg, #1e293b, #0f172a);
-    }
-    .hero h1 { font-size: 48px; margin-bottom: 20px; }
-    .hero p { font-size: 18px; margin-bottom: 30px; }
-    .hero .btn-primary {
-      background-color: #3b82f6; color: #fff;
-      padding: 14px 30px; border-radius: 8px;
-      font-weight: 600; transition: 0.3s;
-    }
-    .hero .btn-primary:hover { background-color: #2563eb; }
+        .logo {
+            font-weight: 800;
+            font-size: 1.25rem;
+            color: var(--brand);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
 
-    /* Sections */
-    section { padding: 80px 0; }
-    .section-header { text-align: center; margin-bottom: 50px; }
-    .section-header h2 { font-size: 36px; }
-    .section-header p { font-size: 16px; max-width: 700px; margin: 0 auto; }
+        /* --- LAYOUT --- */
+        .container {
+            max-width: 900px;
+            margin: 60px auto;
+            padding: 0 20px;
+        }
 
-    /* Features Grid */
-    .features-grid {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 30px;
-      justify-content: center;
-    }
-    .feature-card {
-      background-color: #1e293b;
-      padding: 30px;
-      border-radius: 16px;
-      width: 300px;
-      text-align: center;
-      border: 1px solid #334155;
-    }
-    .feature-card h3 { margin-bottom: 10px; }
-    .feature-card p { font-size: 14px; color: #94a3b8; }
+        .hero { text-align: center; margin-bottom: 50px; }
+        .hero h1 { font-size: 2.8rem; font-weight: 800; margin-bottom: 10px; color: var(--brand); letter-spacing: -1px; }
+        .hero p { color: var(--text-dim); font-size: 1.1rem; }
 
-    /* Upload Section */
-    .upload-box {
-      background: #1e293b;
-      padding: 40px;
-      border-radius: 16px;
-      margin: auto;
-      max-width: 600px;
-      box-shadow: 0px 10px 30px rgba(0,0,0,0.5);
-      text-align: center;
-      border: 1px solid #334155;
-    }
-    .upload-box input[type="file"] {
-      padding: 12px; background: #0f172a; color: #fff;
-      border-radius: 8px; border: 1px solid #3b82f6;
-      cursor: pointer;
-      margin-bottom: 20px;
-    }
-    .upload-box button {
-      padding: 14px 30px; background: #3b82f6; border: none;
-      border-radius: 8px; color: white; font-weight: bold;
-      cursor: pointer;
-      transition: 0.3s;
-    }
-    .upload-box button:hover { background: #2563eb; }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 40px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 20px -2px rgba(0,0,0,0.05);
+        }
 
-    #loader {
-      display: none; margin: 20px auto;
-      border: 4px solid #334155; border-top: 4px solid #3b82f6;
-      border-radius: 50%; width: 40px; height: 40px;
-      animation: spin 1s linear infinite;
-    }
-    @keyframes spin { 0% { transform: rotate(0deg);} 100% { transform: rotate(360deg);} }
+        /* --- UPLOAD ZONE --- */
+        .upload-zone {
+            display: block;
+            border: 2px dashed var(--border);
+            border-radius: 16px;
+            padding: 80px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #fafafa;
+        }
+        .upload-zone:hover { border-color: var(--accent); background: #f8fbff; }
+        .upload-zone i { font-size: 48px; color: var(--accent); margin-bottom: 15px; }
 
-    .results {
-      display: none; margin-top: 40px; gap: 20px; justify-content: center; flex-wrap: wrap;
-    }
-    .stats-card, .heatmap-card {
-      background: #1e293b; padding: 20px; border-radius: 16px;
-      border: 1px solid #334155; max-width: 350px;
-    }
-    .label-text { font-size: 32px; font-weight: 800; margin-bottom: 15px; text-transform: uppercase; }
-    .stat-item { font-size: 16px; margin: 8px 0; padding: 8px; background: #0f172a; border-radius: 6px; }
-    .fake { color: #f87171; border-left: 5px solid #ef4444; }
-    .real { color: #4ade80; border-left: 5px solid #22c55e; }
-    .sus  { color: #fbbf24; border-left: 5px solid #f59e0b; }
-    img { max-width: 100%; border-radius: 12px; border: 2px solid #3b82f6; }
+        .btn-detect {
+            background: var(--brand);
+            color: white;
+            width: 100%;
+            padding: 18px;
+            border-radius: 10px;
+            border: none;
+            font-weight: 700;
+            font-size: 1rem;
+            margin-top: 25px;
+            cursor: pointer;
+            transition: 0.2s;
+            letter-spacing: 0.5px;
+        }
+        .btn-detect:hover { background: #000; transform: translateY(-1px); }
 
-    @media (max-width: 768px) {
-      .features-grid { flex-direction: column; align-items: center; }
-      .results { flex-direction: column; align-items: center; }
-    }
-  </style>
+        /* --- RESULTS SECTION --- */
+        .results-section { display: none; margin-top: 40px; animation: fadeIn 0.6s ease forwards; }
+
+        .report-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-top: 30px;
+        }
+
+        .viz-box { 
+            background: #f8fafc; 
+            border-radius: 14px; 
+            padding: 15px; 
+            border: 1px solid var(--border);
+            text-align: center;
+        }
+        .viz-box img { width: 100%; border-radius: 10px; display: block; margin-top: 10px; }
+        .viz-label { font-size: 0.7rem; font-weight: 800; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
+
+        .badge {
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+        .badge-fake { background: #fee2e2; color: var(--danger); border: 1px solid #fecaca; }
+        .badge-real { background: #dcfce7; color: var(--success); border: 1px solid #bbf7d0; }
+
+        /* --- INFO BLOCKS --- */
+        .info-block {
+            background: #f8fafc;
+            padding: 24px;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            height: 100%;
+        }
+
+        /* --- PROGRESS --- */
+        .progress-bar { height: 10px; background: #e2e8f0; border-radius: 20px; margin: 15px 0; overflow: hidden; }
+        .progress-fill { height: 100%; background: var(--accent); width: 0%; transition: 1.2s cubic-bezier(0.22, 1, 0.36, 1); }
+
+        /* --- LOADER --- */
+        .analyzing-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(4px);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+        .loader { width: 44px; height: 44px; border: 4px solid #f3f3f3; border-top: 4px solid var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
+        
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        input[type="file"] { display: none; }
+    </style>
 </head>
-
 <body>
 
-  <!-- Navbar -->
-  <nav class="navbar">
-    <div class="logo">Detectify.ai</div>
-    <div class="nav-links">
-      <a href="#how-it-works">How It Works</a>
-      <a href="#upload-detect">Detect</a>
-    </div>
-  </nav>
+    <nav>
+        <div class="logo"><i class="ph-fill ph-shield-check"></i> DeepGuardX</div>
+        <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-dim);">Secure Forensic Node</div>
+    </nav>
 
-  <!-- Hero -->
-  <section class="hero">
     <div class="container">
-      <h1>Detect Deepfakes with Confidence</h1>
-      <p>Hybrid Deepfake Detection using Swin Transformer + EfficientNetV2-S Dual Stream Model</p>
-      <a href="#upload-detect" class="btn-primary">Try Detection Now</a>
+        <div class="hero">
+            <h1>DeepGuardX</h1>
+            <p>Enterprise-grade multimodal deepfake identification engine.</p>
+        </div>
+
+        <div class="card" id="uploadCard">
+            <div class="analyzing-overlay" id="loaderOverlay">
+                <div class="loader"></div>
+                <p style="margin-top: 20px; font-weight: 700; color: var(--brand); letter-spacing: 1px;">PROCESSING FORENSIC DATA...</p>
+            </div>
+
+            <form id="uploadForm">
+                <label for="fileInput" class="upload-zone" id="dropZone">
+                    <i class="ph ph-plus-circle"></i>
+                    <h3 id="fileLabel">Select Media Sample</h3>
+                    <p style="font-size: 0.9rem; color: var(--text-dim); margin-top: 8px;">Upload image or audio for neural analysis</p>
+                    <input type="file" id="fileInput" name="file" accept="image/*,audio/*">
+                </label>
+                <button type="submit" class="btn-detect">INITIATE DETECTION</button>
+            </form>
+        </div>
+
+        <section class="results-section" id="resultsSection">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                    <div>
+                        <span style="font-family: 'JetBrains Mono'; font-size: 0.75rem; color: var(--text-dim); font-weight: 600;">SESSION ID: <span id="reportId" style="color: var(--brand);"></span></span>
+                        <h2 style="font-size: 1.5rem; font-weight: 800; margin-top: 4px;">Analysis Results</h2>
+                    </div>
+                    <div id="predictionBadge"></div>
+                </div>
+
+                <div class="report-grid">
+                    <div class="viz-box">
+                        <div class="viz-label">Source Input</div>
+                        <div id="inputMediaPreview" style="margin-top: 10px;"></div>
+                    </div>
+                    <div class="viz-box">
+                        <div class="viz-label">Grad-CAM Heatmap</div>
+                        <img id="gradcamImg" src="">
+                    </div>
+                </div>
+
+                <div class="report-grid">
+                    <div class="info-block">
+                        <div class="viz-label" style="margin-bottom: 12px;">Forensic Justification</div>
+                        <p id="explanationText" style="font-size: 0.95rem; color: var(--text-main);"></p>
+                    </div>
+                    <div class="info-block">
+                        <div class="viz-label" style="margin-bottom: 12px;">Neural Confidence</div>
+                        <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+                            <span id="confidenceVal" style="font-size: 2rem; font-weight: 800; color: var(--accent); line-height: 1;">0%</span>
+                            <span style="font-size: 0.8rem; font-weight: 700; color: var(--text-dim);">PROBABILITY</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="confidenceBar"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
     </div>
-  </section>
 
-  <!-- Features -->
-  <section id="why-detectify">
-    <div class="container">
-      <div class="section-header">
-        <h2>Why Choose Detectify.ai</h2>
-        <p>Our multimodal detection platform offers enterprise-grade security with unmatched accuracy</p>
-      </div>
-      <div class="features-grid">
-        <div class="feature-card">
-          <h3>Audio Detection</h3>
-          <p>Identify voice cloning and synthetic audio with high accuracy.</p>
-        </div>
-        <div class="feature-card">
-          <h3>Image Analysis</h3>
-          <p>Detect manipulated images, face swaps, and AI-generated content.</p>
-        </div>
-        <div class="feature-card">
-          <h3>Video Verification</h3>
-          <p>Frame-by-frame analysis to spot deepfakes and synthetic videos.</p>
-        </div>
-      </div>
-    </div>
-  </section>
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const fileLabel = document.getElementById('fileLabel');
+        const loaderOverlay = document.getElementById('loaderOverlay');
+        const resultsSection = document.getElementById('resultsSection');
 
-  <!-- How It Works -->
-  <section id="how-it-works" class="bg-light">
-    <div class="container">
-      <div class="section-header">
-        <h2>How It Works</h2>
-        <p>Our advanced detection process is simple, secure, and delivers results in seconds.</p>
-      </div>
-      <div class="features-grid">
-        <div class="feature-card"><h3>1. Upload Media</h3><p>Drag & drop images for analysis.</p></div>
-        <div class="feature-card"><h3>2. Secure Transfer</h3><p>Media is uploaded and preprocessed securely.</p></div>
-        <div class="feature-card"><h3>3. Model Selection</h3><p>System selects optimal AI model automatically.</p></div>
-        <div class="feature-card"><h3>4. Run Detection</h3><p>Hybrid model analyzes the media for manipulation.</p></div>
-        <div class="feature-card"><h3>5. Instant Results</h3><p>Get authenticity report and confidence scores.</p></div>
-      </div>
-    </div>
-  </section>
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files[0]) fileLabel.innerText = e.target.files[0].name;
+        });
 
-  <!-- Upload & Detect -->
-  <section id="upload-detect">
-    <div class="container">
-      <div class="section-header">
-        <h2>Upload & Detect</h2>
-        <p>Try our detection technology on your own media files</p>
-      </div>
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const file = fileInput.files[0];
+            if (!file) return;
 
-      <div class="upload-box">
-        <input type="file" id="imageInput" accept="image/*">
-        <button id="analyzeBtn" onclick="upload()">Run Analysis</button>
-        <div id="loader"></div>
-      </div>
+            loaderOverlay.style.display = 'flex';
 
-      <div class="results" id="results">
-        <div class="stats-card">
-          <div id="label" class="label-text"></div>
-          <div class="stat-item">Final Confidence: <strong id="confidence"></strong></div>
-          <hr style="border: 0.5px solid #334155;">
-          <div class="stat-item fake">Fake Probability: <span id="fake"></span></div>
-          <div class="stat-item real">Real Probability: <span id="real"></span></div>
-        </div>
+            try {
+                const formData = new FormData();
+                formData.append(file.type.startsWith('image') ? 'image' : 'audio', file);
+                
+                // Real request to your /predict endpoint
+                const response = await fetch('/predict', { method: 'POST', body: formData });
+                const data = await response.json();
 
-        <div class="heatmap-card">
-          <h3 style="margin-top: 0;">Explainable AI: Model Attention</h3>
-          <p style="font-size: 12px; color: #94a3b8; margin-bottom: 10px;">Heatmap indicates regions of high manipulation probability</p>
-          <img id="cam" alt="Grad-CAM Analysis">
-        </div>
-      </div>
-    </div>
-  </section>
+                setTimeout(() => {
+                    loaderOverlay.style.display = 'none';
+                    showResults(data, file);
+                }, 1500);
 
-<script>
-async function upload() {
-    const input = document.getElementById("imageInput");
-    const loader = document.getElementById("loader");
-    const results = document.getElementById("results");
-    const btn = document.getElementById("analyzeBtn");
+            } catch (err) {
+                alert("Backend Connection Offline");
+                loaderOverlay.style.display = 'none';
+            }
+        });
 
-    if (!input.files.length) { alert("Please choose an image file first."); return; }
+        function showResults(data, file) {
+            resultsSection.style.display = 'block';
+            resultsSection.scrollIntoView({ behavior: 'smooth' });
 
-    btn.disabled = true;
-    loader.style.display = "block";
-    results.style.display = "none";
+            const isFake = data.prediction.toUpperCase() === 'FAKE';
+            document.getElementById('predictionBadge').innerHTML = `
+                <span class="badge ${isFake ? 'badge-fake' : 'badge-real'}">
+                    ${isFake ? 'Deepfake Detected' : 'Verified Authentic'}
+                </span>
+            `;
 
-    const formData = new FormData();
-    formData.append("file", input.files[0]);
+            document.getElementById('explanationText').innerText = data.explanation;
+            document.getElementById('gradcamImg').src = data.gradcam_image + '?t=' + Date.now();
+            
+            const confPercent = (data.confidence * 100).toFixed(1);
+            document.getElementById('confidenceVal').innerText = confPercent + '%';
+            
+            setTimeout(() => {
+                document.getElementById('confidenceBar').style.width = confPercent + '%';
+            }, 100);
 
-    try {
-        const res = await fetch("/predict-image/", { method: "POST", body: formData });
-        if (!res.ok) throw new Error("Server error during inference.");
-
-        const data = await res.json();
-
-        let statusClass = "real";
-        if (data.prediction === "FAKE") statusClass = "fake";
-        if (data.prediction === "SUSPICIOUS") statusClass = "sus";
-
-        document.getElementById("label").innerHTML = `<span class="${statusClass}">${data.prediction}</span>`;
-        document.getElementById("confidence").innerText = data.confidence;
-        document.getElementById("fake").innerText = data.fake_probability;
-        document.getElementById("real").innerText = data.real_probability;
-
-        const camImg = document.getElementById("cam");
-        camImg.src = data.gradcam_image + "?t=" + new Date().getTime();
-
-        camImg.onload = () => {
-            loader.style.display = "none";
-            results.style.display = "flex";
-            btn.disabled = false;
-        };
-
-    } catch (err) {
-        alert("Error: " + err.message);
-        loader.style.display = "none";
-        btn.disabled = false;
-    }
-}
-</script>
-
+            const previewDiv = document.getElementById('inputMediaPreview');
+            previewDiv.innerHTML = "";
+            if(file.type.startsWith('image')) {
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                img.style.width = "100%";
+                img.style.borderRadius = "8px";
+                previewDiv.appendChild(img);
+            } else {
+                previewDiv.innerHTML = '<div style="padding:40px; text-align:center;"><i class="ph ph-waveform" style="font-size:48px; color:var(--accent);"></i></div>';
+            }
+            document.getElementById('reportId').innerText = 'DG-' + Math.floor(Math.random()*9000 + 1000);
+        }
+    </script>
 </body>
 </html>

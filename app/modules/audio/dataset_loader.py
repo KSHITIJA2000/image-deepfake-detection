@@ -9,13 +9,13 @@ try:
 except ImportError:
     from audio_preprocessing import extract_mel_spectrogram
 
-
+# Supported audio extensions
 SUPPORTED_EXTENSIONS = (".wav", ".mp3")
 CLASS_TO_LABEL = {"real": 0, "fake": 1}
 
 
 class AudioDeepfakeDataset(Dataset):
-    """PyTorch dataset for audio deepfake classification."""
+    """PyTorch Dataset for audio deepfake classification."""
 
     def __init__(
         self,
@@ -33,17 +33,17 @@ class AudioDeepfakeDataset(Dataset):
         self.n_fft = n_fft
         self.hop_length = hop_length
         self.n_mels = n_mels
-        self.augment = augment          # True for train, False for val/test
+        self.augment = augment
         self.samples: List[Tuple[str, int]] = []
 
         self._load_samples()
 
     def _load_samples(self) -> None:
+        """Load all audio file paths and their labels."""
         for class_name, label in CLASS_TO_LABEL.items():
             class_dir = os.path.join(self.root_dir, class_name)
             if not os.path.isdir(class_dir):
                 continue
-
             for file_name in os.listdir(class_dir):
                 if file_name.lower().endswith(SUPPORTED_EXTENSIONS):
                     file_path = os.path.join(class_dir, file_name)
@@ -68,18 +68,15 @@ class AudioDeepfakeDataset(Dataset):
             n_fft=self.n_fft,
             hop_length=self.hop_length,
             n_mels=self.n_mels,
-            augment=self.augment,       # passed through from dataset config
+            augment=self.augment,
         )
-
-        # Return None for corrupted/unreadable audio; collate_fn will filter it out.
         if mel_tensor is None:
             return None
-
         return mel_tensor, label
 
 
 def collate_skip_corrupted(batch: List[Optional[Tuple[torch.Tensor, int]]]):
-    """Collate function that removes corrupted samples returned as None."""
+    """Collate function that skips corrupted audio samples."""
     valid = [item for item in batch if item is not None]
     if len(valid) == 0:
         return (
