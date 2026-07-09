@@ -1,0 +1,61 @@
+# Virtual Environment
+venv/
+.env/
+video_tf_gpu/
+static/
+results/
+fusion_cache(avceleb)/
+evaluation_cache(avceleb)/
+evaluation_cache(140k)/
+evaluation_cache(1500)/
+evaluation_cache(100k)/
+evaluation_results/
+cache_faces(140k)/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Datasets
+dataset(140k)/
+dataset/
+dataset(1500)/
+data/
+plots/
+plots ff/
+
+
+# Results
+*.png
+*.log
+
+# Audio/video temporary files
+*.wav
+*.mp4
+*.avi
+
+# Temporary
+target_frames/
+temp/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# React
+node_modules/
+dist/
+
+# Model files
+*.pth
+*.pt
+*.h5
+models/
+
+# OS files
+Thumbs.db
+.DS_Store

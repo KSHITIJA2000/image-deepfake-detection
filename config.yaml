@@ -1,0 +1,4 @@
+image:
+  model_path: "models/image_model/EfficientNetV2_model.pth"
+  img_size: 224
+  threshold: 0.5
