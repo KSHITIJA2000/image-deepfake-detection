@@ -41,6 +41,9 @@ plots ff/
 # Temporary
 target_frames/
 temp/
+fusion_cache/
+gradcam_outputs/
+
 
 # Python cache
 __pycache__/

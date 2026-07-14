@@ -473,21 +473,10 @@ class FusionModel(nn.Module):
         fused_tokens = self.transformer(
             tokens
         )
-        print("\n========== TOKEN CONTRIBUTION ==========")
+        
+       # print("\n========== TOKEN CONTRIBUTION ==========")
 
-        print("Image token:",
-      fused_tokens[:,0,:].norm(dim=1).mean().item())
-
-        print("Video token:",
-      fused_tokens[:,1,:].norm(dim=1).mean().item())
-
-        print("Audio token:",
-      fused_tokens[:,2,:].norm(dim=1).mean().item())
-
-        print("Lip token:",
-      fused_tokens[:,3,:].norm(dim=1).mean().item())
-
-        print("========================================")
+    
 
 
         ############################################
@@ -507,21 +496,11 @@ class FusionModel(nn.Module):
         ############################################
         # CLASSIFIER
         ############################################
-        print("\n========== FEATURE NORMS ==========")
-        print("Image :", image_features.norm(dim=1).mean().item())
-        print("Video :", video_features.norm(dim=1).mean().item())
-        print("Audio :", audio_features.norm(dim=1).mean().item())
-        print("Lip   :", lip_features.norm(dim=1).mean().item())
-        print("===================================")
+        
         logits = self.classifier(
             fused
         )
-        print("\nLogits:")
-        print(logits)
-
-        print("\nSoftmax:")
-        print(torch.softmax(logits, dim=1))
-
+        
 
         ############################################
         # OPTIONAL FEATURES

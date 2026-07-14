@@ -1,21 +1,5 @@
 import os
-
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
-os.environ["AUTOGRAPH_VERBOSITY"] = "0"
-
-
-import warnings
-warnings.filterwarnings("ignore")
-
-
-import logging
-logging.getLogger("tensorflow").setLevel(logging.ERROR)
-logging.getLogger("keras").setLevel(logging.ERROR)
-
-
 import shutil
-import pathlib
 import traceback
 
 from typing import Optional
@@ -24,19 +8,14 @@ from typing import Optional
 from fastapi import (
     FastAPI,
     UploadFile,
-    File,
-    Request
+    File
 )
 
-
-from fastapi.responses import (
-    HTMLResponse,
-    JSONResponse
-)
-
+from fastapi.responses import JSONResponse
 
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
+
+from fastapi.middleware.cors import CORSMiddleware
 
 
 
@@ -46,9 +25,11 @@ from app.modules.video.video_detection import VideoDeepfakeSystem
 
 
 
-# ==========================================================
-# APP INITIALIZATION
-# ==========================================================
+
+
+# =====================================================
+# APP
+# =====================================================
 
 app = FastAPI(
     title="DeepGuardX Multimodal Deepfake Detection"
@@ -56,56 +37,101 @@ app = FastAPI(
 
 
 
-# ==========================================================
-# STATIC + TEMPLATE
-# ==========================================================
 
+
+# =====================================================
+# CORS
+# =====================================================
+
+app.add_middleware(
+
+    CORSMiddleware,
+
+    allow_origins=[
+        "http://localhost:5173"
+    ],
+
+    allow_credentials=True,
+
+    allow_methods=["*"],
+
+    allow_headers=["*"]
+
+)
+
+
+
+
+
+# =====================================================
+# STATIC FILES
+# =====================================================
+
+# =====================================================
+# STATIC FILES
+# =====================================================
+
+# Video GradCAM folder
+os.makedirs(
+    "static/gradcam",
+    exist_ok=True
+)
+
+
+# Image GradCAM folder
+os.makedirs(
+    "gradcam_outputs",
+    exist_ok=True
+)
+
+
+# Existing static files
 app.mount(
     "/static",
-    StaticFiles(directory="static"),
+    StaticFiles(
+        directory="static"
+    ),
     name="static"
 )
 
 
-
-TEMPLATE_DIR = pathlib.Path(
-    "templates"
-).resolve()
-
-
-
-templates = Jinja2Templates(
-    directory=str(TEMPLATE_DIR)
+# Image GradCAM files
+app.mount(
+    "/gradcam",
+    StaticFiles(
+        directory="gradcam_outputs"
+    ),
+    name="gradcam"
 )
 
 
 
-try:
-    templates.env.cache = {}
-except:
-    pass
 
 
+# =====================================================
+# UPLOAD FOLDER
+# =====================================================
 
-
-# ==========================================================
-# UPLOAD DIRECTORY
-# ==========================================================
 
 UPLOAD_FOLDER = "data/uploads"
 
 
 os.makedirs(
+
     UPLOAD_FOLDER,
+
     exist_ok=True
+
 )
 
 
 
 
-# ==========================================================
+
+# =====================================================
 # LOAD MODELS
-# ==========================================================
+# =====================================================
+
 
 print("\n==============================")
 print("Loading Detection Models")
@@ -116,12 +142,9 @@ print("==============================\n")
 image_detector = ImageDeepfakeDetector()
 
 
-
 audio_detector = AudioDeepfakeDetector()
 
 
-
-# Loads FusionModel internally
 video_detector = VideoDeepfakeSystem()
 
 
@@ -132,56 +155,33 @@ print("\nAll Models Loaded Successfully\n")
 
 
 
-# ==========================================================
-# HOME
-# ==========================================================
-
-@app.get(
-    "/",
-    response_class=HTMLResponse
-)
-async def home(request:Request):
 
 
-    return templates.TemplateResponse(
+# =====================================================
+# HELPERS
+# =====================================================
 
-        "upload.html",
-
-        {
-            "request":request
-        }
-
-    )
-
-
-
-
-
-
-# ==========================================================
-# SAFE CONFIDENCE
-# ==========================================================
 
 def safe_confidence(value):
 
     try:
 
-        value=float(value)
+        value = float(value)
 
 
-        if value<=1:
+        if value <= 1:
 
-            value*=100
+            value *= 100
 
 
         return round(
 
             max(
+
                 0,
-                min(
-                    value,
-                    100
-                )
+
+                min(value,100)
+
             ),
 
             2
@@ -197,22 +197,90 @@ def safe_confidence(value):
 
 
 
+def format_gradcam(value):
 
 
-# ==========================================================
-# PREDICT API
-# ==========================================================
+    if not value:
 
-@app.post(
-    "/predict"
-)
+        return []
+
+
+    if isinstance(value,list):
+
+        return value
+
+
+    return [value]
+
+
+
+
+
+def safe_remove(path):
+
+
+    try:
+
+
+        if os.path.exists(path):
+
+            os.remove(path)
+
+
+    except Exception as e:
+
+
+        print(
+            "Cleanup error:",
+            e
+        )
+
+
+
+
+
+
+
+
+# =====================================================
+# HEALTH
+# =====================================================
+
+
+@app.get("/health")
+
+def health():
+
+
+    return {
+
+        "status":
+
+        "DeepGuardX API Running"
+
+    }
+
+
+
+
+
+
+
+
+# =====================================================
+# PREDICT
+# =====================================================
+
+
+@app.post("/predict")
+
 async def predict(
 
-    image:Optional[UploadFile]=File(None),
+    image: Optional[UploadFile] = File(None),
 
-    audio:Optional[UploadFile]=File(None),
+    audio: Optional[UploadFile] = File(None),
 
-    video:Optional[UploadFile]=File(None)
+    video: Optional[UploadFile] = File(None)
 
 ):
 
@@ -231,7 +299,7 @@ async def predict(
                 content={
 
                     "error":
-                    "Upload image, audio or video"
+                    "No file uploaded"
 
                 }
 
@@ -241,21 +309,23 @@ async def predict(
 
 
 
-        # ==================================================
-        # IMAGE MODE
-        # ==================================================
+
+
+        # =================================================
+        # IMAGE
+        # =================================================
+
 
         if image:
 
 
-            path=os.path.join(
+            path = os.path.join(
 
                 UPLOAD_FOLDER,
 
                 image.filename
 
             )
-
 
 
             with open(path,"wb") as f:
@@ -270,18 +340,15 @@ async def predict(
                 )
 
 
-
-            result=image_detector.predict(
-
-                path
-
-            )
+            await image.close()
 
 
 
-            if os.path.exists(path):
+            result = image_detector.predict(path)
 
-                os.remove(path)
+
+
+            safe_remove(path)
 
 
 
@@ -296,17 +363,13 @@ async def predict(
 
                 "prediction":
 
-                result[0],
+                result[0].upper(),
 
 
 
                 "confidence":
 
-                safe_confidence(
-
-                    result[1]
-
-                ),
+                safe_confidence(result[1]),
 
 
 
@@ -318,33 +381,35 @@ async def predict(
 
                 "gradcam_images":
 
-                [
+                format_gradcam(
 
                     result[4]
 
-                ]
-
-                if result[4]
-
-                else [],
+                ),
 
 
 
                 "metrics":{
 
 
-                    "visual":
+                    "Image Analysis":
 
                     safe_confidence(result[1]),
 
 
-                    "audio":0,
+                    "Audio Analysis":
+
+                    0,
 
 
-                    "lipsync":0,
+                    "Lip Sync Analysis":
+
+                    0,
 
 
-                    "fusion":0
+                    "Fusion Decision":
+
+                    0
 
                 }
 
@@ -357,12 +422,12 @@ async def predict(
 
 
 
-        # ==================================================
-        # AUDIO MODE
-        # ==================================================
+        # =================================================
+        # AUDIO
+        # =================================================
+
 
         if audio:
-
 
 
             path=os.path.join(
@@ -388,24 +453,19 @@ async def predict(
 
 
 
-
-            result=audio_detector.predict(
-
-                path
-
-            )
+            await audio.close()
 
 
 
-            if os.path.exists(path):
+            result = audio_detector.predict(path)
 
-                os.remove(path)
 
+
+            safe_remove(path)
 
 
 
             return {
-
 
 
                 "mode":
@@ -422,11 +482,7 @@ async def predict(
 
                 "confidence":
 
-                safe_confidence(
-
-                    result[1]
-
-                ),
+                safe_confidence(result[1]),
 
 
 
@@ -438,33 +494,37 @@ async def predict(
 
                 "gradcam_images":
 
-                [
+                format_gradcam(
 
                     result[4]
 
-                ]
-
-                if result[4]
-
-                else [],
+                ),
 
 
 
                 "metrics":{
 
 
-                    "visual":0,
+                    "Image Analysis":
+
+                    0,
 
 
-                    "audio":
+                    "Audio Analysis":
 
                     safe_confidence(result[1]),
 
 
-                    "lipsync":0,
+
+                    "Lip Sync Analysis":
+
+                    0,
 
 
-                    "fusion":0
+
+                    "Fusion Decision":
+
+                    0
 
                 }
 
@@ -477,12 +537,12 @@ async def predict(
 
 
 
-        # ==================================================
-        # VIDEO FUSION MODE
-        # ==================================================
+        # =================================================
+        # VIDEO
+        # =================================================
+
 
         if video:
-
 
 
             path=os.path.join(
@@ -508,52 +568,19 @@ async def predict(
 
 
 
-            try:
+            await video.close()
 
 
 
-                result=video_detector.predict(
-
-                    path
-
-                )
+            result = video_detector.predict(path)
 
 
 
-                print("\n==============================")
-                print("FUSION RESULT")
-                print(result)
-                print("==============================\n")
-
-
-
-
-            except Exception as e:
-
-
-                traceback.print_exc()
-
-
-                result={}
-
-
-
-
-            finally:
-
-
-
-                if os.path.exists(path):
-
-                    os.remove(path)
-
-
-
+            safe_remove(path)
 
 
 
             return {
-
 
 
                 "mode":
@@ -574,6 +601,7 @@ async def predict(
 
 
 
+
                 "confidence":
 
                 safe_confidence(
@@ -590,41 +618,40 @@ async def predict(
 
 
 
+
                 "explanation":
 
                 result.get(
 
                     "explanation",
 
-                    "Video analysis completed."
+                    ""
 
                 ),
 
 
+
+
+                # ONLY TOP 5 GRADCAM
 
                 "gradcam_images":
 
-                result.get(
+                format_gradcam(
 
-                    "gradcam_images",
+                    result.get(
 
-                    []
+                        "gradcam_images",
 
-                ),
+                        []
 
-
-
-                "suspicious_frames":
-
-                result.get(
-
-                    "suspicious_frames",
-
-                    []
+                    )
 
                 ),
 
 
+
+
+                # FORENSIC SCORES
 
                 "metrics":
 
@@ -632,25 +659,13 @@ async def predict(
 
                     "metrics",
 
-                    {
-
-
-                        "visual":0,
-
-
-                        "audio":0,
-
-
-                        "lipsync":0,
-
-
-                        "fusion":0
-
-                    }
+                    {}
 
                 )
 
             }
+
+
 
 
 

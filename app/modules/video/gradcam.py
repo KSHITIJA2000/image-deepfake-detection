@@ -10,6 +10,7 @@ class VideoGradCAM:
     def __init__(self, model):
 
         self.model = model
+        self.model.eval()
 
         self.gradients = None
         self.activations = None
@@ -110,8 +111,9 @@ class VideoGradCAM:
         # FORWARD
         ################################################
 
-        logits, _ = self.model(
-            x
+        logits, _, _ = self.model(
+         x,
+         return_features=True
         )
 
 

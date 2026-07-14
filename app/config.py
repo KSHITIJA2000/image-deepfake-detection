@@ -17,7 +17,12 @@ audio_model_path = os.path.join(
     "audio_model",
     "audio_model.pth"
 )
-GRADCAM_DIR = "static/gradcam"
+# Image GradCAM output
+IMAGE_GRADCAM_DIR = "gradcam_outputs"
+
+
+# Video GradCAM output
+VIDEO_GRADCAM_DIR = "static/gradcam"
 
 # GradCAM output folder
 GRADCAM_DIR = os.path.join(BASE_DIR, "static", "gradcam")

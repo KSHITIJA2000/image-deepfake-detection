@@ -14,17 +14,11 @@ logging.getLogger("tensorflow").setLevel(logging.ERROR)
 logging.getLogger("keras").setLevel(logging.ERROR)
 
 
-
-import numpy as np
-
 import torch
 import torch.nn as nn
 
 
-from torch.utils.data import (
-    DataLoader,
-    WeightedRandomSampler
-)
+from torch.utils.data import DataLoader
 
 
 from tqdm import tqdm
@@ -38,7 +32,6 @@ from sklearn.metrics import (
     roc_auc_score,
     confusion_matrix
 )
-
 
 
 from app.modules.fusion.FusionDatasetCached import (
@@ -120,11 +113,7 @@ LIP_MODEL_PATH = (
 # CACHE
 ####################################################
 
-CACHE_DIR = (
-
-    "fusion_cache"
-
-)
+CACHE_DIR = "fusion_cache"
 
 
 
@@ -132,11 +121,7 @@ CACHE_DIR = (
 # SAVE DIRECTORY
 ####################################################
 
-SAVE_DIR = (
-
-    "models/fusion_model"
-
-)
+SAVE_DIR = "models/fusion_model"
 
 
 os.makedirs(
@@ -163,6 +148,9 @@ EPOCHS_STAGE2 = 10
 
 
 EARLY_STOPPING_PATIENCE = 5
+
+
+
 ####################################################
 # DATASETS
 ####################################################
@@ -200,68 +188,57 @@ print()
 
 
 ####################################################
-# CLASS BALANCE CHECK
+# DATASET BALANCE CHECK
 ####################################################
 
-train_labels = [
-
-    sample["label"]
-
-    for sample in train_dataset.samples
-
-]
+real_count = 0
+fake_count = 0
 
 
-class_counts = np.bincount(
+for sample in train_dataset.samples:
 
-    train_labels
+    if sample["label"] == 0:
 
+        real_count += 1
+
+    else:
+
+        fake_count += 1
+
+
+
+print()
+
+print("=" * 60)
+
+print("DATASET DISTRIBUTION")
+
+print("=" * 60)
+
+print(
+    "Real samples:",
+    real_count
 )
 
-
-
-real_count = class_counts[0]
-
-fake_count = class_counts[1]
-
-
-
-print("Real samples :", real_count)
-
-print("Fake samples :", fake_count)
-
-
-
-####################################################
-# WEIGHTED RANDOM SAMPLER
-####################################################
-
-sample_weights = [
-
-    1.0 / class_counts[label]
-
-    for label in train_labels
-
-]
-
-
-
-sampler = WeightedRandomSampler(
-
-    weights=torch.DoubleTensor(
-        sample_weights
-    ),
-
-    num_samples=len(sample_weights),
-
-    replacement=True
-
+print(
+    "Fake samples:",
+    fake_count
 )
+
+print(
+    "Total:",
+    len(train_dataset)
+)
+
+print("=" * 60)
+
+print()
 
 
 
 ####################################################
 # DATALOADERS
+# BALANCED DATASET -> NORMAL SHUFFLE
 ####################################################
 
 
@@ -271,7 +248,7 @@ train_loader = DataLoader(
 
     batch_size=BATCH_SIZE,
 
-    sampler=sampler,
+    shuffle=True,
 
     num_workers=0,
 
@@ -301,9 +278,15 @@ val_loader = DataLoader(
 
 print()
 
-print("Train batches :", len(train_loader))
+print(
+    "Train batches:",
+    len(train_loader)
+)
 
-print("Val batches   :", len(val_loader))
+print(
+    "Val batches:",
+    len(val_loader)
+)
 
 print()
 
@@ -352,37 +335,12 @@ print()
 
 
 ####################################################
-# CLASS WEIGHT LOSS
+# LOSS
+# NO CLASS WEIGHTS
 ####################################################
 
 
-class_weights = torch.tensor(
-
-    [
-
-        (real_count + fake_count)
-        /
-        (2 * real_count),
-
-
-        (real_count + fake_count)
-        /
-        (2 * fake_count)
-
-    ],
-
-
-    dtype=torch.float32,
-
-    device=DEVICE
-
-)
-
-
-
 criterion = nn.CrossEntropyLoss(
-
-    weight=class_weights,
 
     label_smoothing=0.05
 
@@ -392,7 +350,7 @@ criterion = nn.CrossEntropyLoss(
 
 ####################################################
 # STAGE 1
-# ONLY FUSION LAYERS TRAIN
+# TRAIN ONLY FUSION LAYERS
 ####################################################
 
 
@@ -410,9 +368,7 @@ optimizer = torch.optim.AdamW(
 
     ),
 
-
-    lr=1e-4,
-
+    lr=3e-4,
 
     weight_decay=1e-4
 
@@ -455,27 +411,19 @@ scaler = torch.cuda.amp.GradScaler(
 
 history = {
 
-
     "train_loss": [],
-
 
     "train_acc": [],
 
-
     "val_loss": [],
-
 
     "val_acc": [],
 
-
     "precision": [],
-
 
     "recall": [],
 
-
     "f1": [],
-
 
     "auc": []
 
@@ -491,9 +439,6 @@ history = {
 best_f1 = 0.0
 
 
-best_loss = float("inf")
-
-
 epochs_without_improvement = 0
 
 
@@ -502,7 +447,7 @@ print()
 
 print("=" * 60)
 
-print("Setup Complete")
+print("SETUP COMPLETE")
 
 print("=" * 60)
 
@@ -608,7 +553,7 @@ def train_one_epoch():
 
 
         ################################################
-        # FORWARD + LOSS
+        # FORWARD PASS
         ################################################
 
 
@@ -666,6 +611,7 @@ def train_one_epoch():
             optimizer
 
         )
+
 
 
         torch.nn.utils.clip_grad_norm_(
@@ -741,7 +687,6 @@ def train_one_epoch():
             loss=f"{loss.item():.4f}"
 
         )
-
 
 
 
@@ -1077,6 +1022,7 @@ def validate():
     print("=" * 60)
 
 
+
     print(
 
         f"Loss      : {val_loss:.4f}"
@@ -1125,7 +1071,6 @@ def validate():
 
     print(cm)
 
-
     print("=" * 60)
 
     print()
@@ -1148,8 +1093,8 @@ def validate():
 
     )
 ####################################################
-# STAGE 1 TRAINING
-# ONLY FUSION LAYERS
+# STAGE 1
+# ONLY FUSION LAYERS TRAIN
 ####################################################
 
 
@@ -1298,6 +1243,7 @@ for epoch in range(EPOCHS_STAGE1):
 
     )
 
+
     print()
 
     print(
@@ -1391,6 +1337,7 @@ for epoch in range(EPOCHS_STAGE1):
 
         )
 
+
         print(
 
             "Patience:",
@@ -1426,6 +1373,8 @@ for epoch in range(EPOCHS_STAGE1):
 
 
 
+
+
 print()
 
 print("=" * 60)
@@ -1435,6 +1384,7 @@ print("STAGE 1 COMPLETED")
 print("=" * 60)
 
 print()
+
 
 print(
 
@@ -1464,7 +1414,7 @@ print()
 
 
 ####################################################
-# LOAD BEST STAGE 1
+# LOAD BEST STAGE 1 CHECKPOINT
 ####################################################
 
 
@@ -1494,6 +1444,8 @@ if os.path.exists(stage1_path):
     )
 
 
+    print()
+
     print(
 
         "Loaded best Stage 1 checkpoint"
@@ -1505,6 +1457,8 @@ if os.path.exists(stage1_path):
 else:
 
 
+    print()
+
     print(
 
         "Stage 1 checkpoint not found"
@@ -1515,7 +1469,7 @@ else:
 
 
 ####################################################
-# UNFREEZE EVERYTHING
+# UNFREEZE BACKBONES
 ####################################################
 
 
@@ -1569,9 +1523,8 @@ scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
 
 
 
-
 ####################################################
-# RESET BEST
+# RESET BEST TRACKING
 ####################################################
 
 
@@ -1584,7 +1537,7 @@ epochs_without_improvement = 0
 
 
 ####################################################
-# TRAINING LOOP
+# STAGE 2 LOOP
 ####################################################
 
 
@@ -1642,7 +1595,7 @@ for epoch in range(EPOCHS_STAGE2):
 
 
     ################################################
-    # PRINT
+    # PRINT RESULTS
     ################################################
 
 
@@ -1802,7 +1755,7 @@ for epoch in range(EPOCHS_STAGE2):
 
 
 ####################################################
-# TRAINING FINISHED
+# TRAINING COMPLETE
 ####################################################
 
 
@@ -1817,6 +1770,7 @@ print("=" * 60)
 print()
 
 
+
 print(
 
     "Best Final F1:",
@@ -1827,6 +1781,7 @@ print(
 
 
 print()
+
 
 
 print(
